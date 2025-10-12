@@ -1,0 +1,15 @@
+[package]
+name = "sha256-example"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+binius-circuits = { git = "https://github.com/IrreducibleOSS/binius64", version = "0.1.0" }
+binius-core = { git = "https://github.com/IrreducibleOSS/binius64", version = "0.1.0" }
+binius-frontend = { git = "https://github.com/IrreducibleOSS/binius64", version = "0.1.0" }
+binius-prover = { git = "https://github.com/IrreducibleOSS/binius64", version = "0.1.0" }
+binius-transcript = { git = "https://github.com/IrreducibleOSS/binius64", version = "0.1.0" }
+binius-verifier = { git = "https://github.com/IrreducibleOSS/binius64", version = "0.1.0" }
+rand = { version = "0.9.2", default-features = false, features = ["std", "thread_rng"] }
+sha2 = "0.10"
+hex = "0.4"

@@ -673,6 +673,7 @@ version = "0.1.0"
 dependencies = [
  "binius-circuits",
  "binius-core",
+ "binius-field",
  "binius-frontend",
  "binius-prover",
  "binius-transcript",

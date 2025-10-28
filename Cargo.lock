@@ -681,6 +681,7 @@ dependencies = [
  "hex",
  "rand",
  "sha2",
+ "sha3",
 ]
 
 [[package]]

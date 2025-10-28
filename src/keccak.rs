@@ -1,6 +1,7 @@
-use binius_circuits::blake2b::{Blake2bCircuit, blake2b};
-use binius_core::{verify::verify_constraints};
+use binius_circuits::keccak::Keccak256;
+use binius_core::{verify::verify_constraints, word::Word};
 use binius_frontend::CircuitBuilder;
+use sha3::{Digest, Keccak256 as CpuKeccak256};
 
 use binius_prover::{
     OptimalPackedB128, Prover, hash::parallel_compression::ParallelCompressionAdaptor,
@@ -14,37 +15,43 @@ use binius_verifier::{
 
 use std::time::Instant;
 
-pub fn blake2b_circuit(image_bytes: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
-    println!("Proof for Blake2b circuit:");
+pub fn keccak_circuit(image_bytes: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
+    println!("Proof for keccak circuit: ");
     // Start timer for setup
     //let setup_timer = Instant::now();
-
     // New Circuit
     let builder = CircuitBuilder::new();
 
-    // Create Circuit
-    let max_msg_len_bytes = image_bytes.len();
-    let blake2b_circuit = Blake2bCircuit::new_with_length(&builder, max_msg_len_bytes);
+    let size = image_bytes.len();
+
+    let n_wires = (size + 7) / 8;
+
+    let message: Vec<_> = (0..n_wires).map(|_| builder.add_witness()).collect();
+
+    let commitment: [_; 4] = core::array::from_fn(|_| builder.add_inout());
+
+    let len_bytes = builder.add_witness();
+
+    let keccak = Keccak256::new(&builder, len_bytes, commitment, message);
     let circuit = builder.build();
-
-    // Create witness
     let mut witness = circuit.new_witness_filler();
+    witness[len_bytes] = Word(size as u64);
+    keccak.populate_message(&mut witness, image_bytes);
 
-    let expected_digest_vec = blake2b(&image_bytes, 64);
-    let mut expected_digest = [0u8; 64];
-    expected_digest.copy_from_slice(&expected_digest_vec);
-
-    blake2b_circuit.populate_message(&mut witness, &image_bytes);
-    blake2b_circuit.populate_digest(&mut witness, &expected_digest);
+    let digest = CpuKeccak256::digest(image_bytes);
+    let mut digest_bytes = [0u8; 32];
+    digest_bytes.copy_from_slice(&digest);
+    keccak.populate_digest(&mut witness, digest_bytes);
 
     circuit.populate_wire_witness(&mut witness)?;
 
     let cs = circuit.constraint_system();
     let witness_vec = witness.into_value_vec();
     verify_constraints(cs, &witness_vec)?;
-    println!("✓ constraints verified");
 
-    // prover / verifier
+    println!("✓ constraint verified");
+
+    // prove / verify
     let compression = ParallelCompressionAdaptor::new(StdCompression::default());
     let verifier = Verifier::<StdDigest, _>::setup(cs.clone(), 1, StdCompression::default())?;
     let prover = Prover::<OptimalPackedB128, _, StdDigest>::setup(verifier.clone(), compression)?;
